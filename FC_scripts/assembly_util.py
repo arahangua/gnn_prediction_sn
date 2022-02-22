@@ -18,7 +18,7 @@ from viziphant.rasterplot import rasterplot
 import parmap
 from elephant.spike_train_correlation import spike_time_tiling_coefficient
 
-
+import bct
 
 
 # for wp1 
@@ -136,7 +136,7 @@ class Spiketrain:
         rasterplot(neotrain, s=dot_size, c='black')
         
     def parallel_fncch(self, entry, neotrains, binsize):
-        #pastore et al. 2018
+        #adapting pastore et al. 2018
         #binsize =1
         #n_cell = len(neotrains)
         # weight_mat= np.zeros((n_cell,n_cell))
@@ -205,8 +205,38 @@ class Spiketrain:
         return weight_mat, lag_mat, ex_in_mat
             
         
+    def make_distance_vec(self, probe_idx, xy_pos):
+        distance_vec=[]
+        pre = probe_idx[0]
+        post = probe_idx[1]
         
-    def compute_fncch_connectivity(self, sorted_time, binsize, save_result, n_cpu, if_server, sensitivity):
+        for ii in range(len(pre)):
+            
+            pos1 = xy_pos[pre[ii],:]
+            pos2 = xy_pos[post[ii],:]
+            distance_vec.append(np.linalg.norm(pos1 - pos2))
+            
+        return np.array(distance_vec)
+
+    def compute_con_density(self, dale_mat):
+        tot_con= dale_mat.shape[0]**2 - dale_mat.shape[0]
+        exist_con = np.sum(dale_mat!=0)
+        density = exist_con/tot_con
+        return density
+    
+    def apply_dale_law(self, ex_in_mat_after_prop):
+        dale_mat = np.copy(ex_in_mat_after_prop)
+        for row in range(ex_in_mat_after_prop.shape[0]):
+           count_ex = np.sum(ex_in_mat_after_prop[row,:]==1)
+           count_in = np.sum(ex_in_mat_after_prop[row,:]==-1)
+           
+           if(count_ex>=count_in):
+               dale_mat[row,np.where(ex_in_mat_after_prop[row,:]==-1)[0]]=0
+           else:
+               dale_mat[row,np.where(ex_in_mat_after_prop[row,:]==1)[0]]=0
+        return dale_mat
+    
+    def compute_fncch_connectivity(self, xy_pos, sensitivity, binsize=1, n_cpu=16):
                 
         n_neurons = len(self.spktime_list)
         for_idx = np.arange(n_neurons)
@@ -214,8 +244,6 @@ class Spiketrain:
         
         combi = combinations(for_idx, 2)
         combi_list=list(combi)
-        
-            
         
         
         result = parmap.map(self.parallel_fncch, combi_list, neotrains, binsize, pm_processes=n_cpu, pm_pbar=True)
@@ -228,11 +256,9 @@ class Spiketrain:
         thres_weight_mat = np.copy(weight_mat)
         
          # spatio temporal filtering 
-        prop_velocity = 600 # 500um/ms
-        xy_pos = self.get_xy_positions(sorted_time)
-        
-        
-        
+        prop_velocity = 600 # 600um/ms
+        # xy_pos = self.get_xy_positions(sorted_time)
+               
         probe_idx = np.where(thres_weight_mat>0)
         lags_to_probe = lag_mat[probe_idx]
         
@@ -274,17 +300,12 @@ class Spiketrain:
         sigma_in = np.nanmean(abs(weight_mat[inhibitory_idx]))
         
         #sns.heatmap(weight_mat)
-        
-       
-        
+  
         to_zero_ex=np.where(weight_mat[excitatory_idx]< (mu_ex +2*sigma_ex*sensitivity))
-        #to_zero_ex=np.where(weight_mat[excitatory_idx]< 0.05)
-        
         to_zero_in=np.where(weight_mat[inhibitory_idx]< (mu_in +sigma_in*sensitivity))
         
         thres_weight_mat[excitatory_idx[0][to_zero_ex], excitatory_idx[1][to_zero_ex]] = 0
         thres_weight_mat[inhibitory_idx[0][to_zero_in], inhibitory_idx[1][to_zero_in]] = 0
-        
         
         ex_in_mat[excitatory_idx[0][to_zero_ex], excitatory_idx[1][to_zero_ex]] = 0
         ex_in_mat[inhibitory_idx[0][to_zero_in], inhibitory_idx[1][to_zero_in]] = 0
@@ -293,11 +314,48 @@ class Spiketrain:
         con_result['lag_mat'] = lag_mat
         con_result['ex_in_mat'] = ex_in_mat
         con_result['sensitivity']=sensitivity
-                   
-        if(save_result):
-            np.save(sorted_time + '/con_fncch_result_' + str(sensitivity), con_result)
         
-        return thres_weight_mat, lag_mat, ex_in_mat
+        # further filtering e.g. dale's law 
+        
+        # application of dale's law
+        
+        ex_in_mat_after_prop = np.copy(con_result['ex_in_mat_after_prop'])
+        
+        
+        # exists ihibitory? 
+        dale_mat = self.apply_dale_law(ex_in_mat_after_prop)        
+        # check connection density. not used now.
+        dale_density = self.compute_con_density(dale_mat)
+               
+        # dale treatment of vanilla result 
+        van_graph = self.apply_dale_law(con_result['ex_in_mat'])        
+        van_weight = np.copy(con_result['final_weight_mat'])
+        van_weight[van_graph==0]=0
+        
+        con_result['dale_mat']= van_graph
+        con_result['dale_mat_raw']=dale_mat
+        con_result['dale_weight']=van_weight
+        
+        #check number of components for vanilla thresholded matrix
+        #undirected treatment 
+        
+       
+        van_graph = (van_graph + van_graph.T) /2
+        van_graph[van_graph!=0]=1
+        comps, comps_size=bct.algorithms.get_components(van_graph)
+        
+        print('num of connected components :' + str(np.sum(comps_size>=2)))
+        print('density of generated graph (converted to an undirected graph) :' + str(self.compute_con_density(van_graph)))
+        print('used sensitivity : ' +str(sensitivity))
+        # apply thesholding 
+        
+        con_result['con_density']=self.compute_con_density(van_graph)
+        con_result['comps_viable']=np.sum(comps_size>=2)
+        con_result['comp_sizes']=comps_size
+        
+           
+        
+        return con_result
     
 
     
@@ -364,87 +422,12 @@ class Spiketrain:
 
 
         
-        
-    def threshold_fncch_mat(self, file, config, sensitivity):
-        savefol = neural_assembly_utils.return_savepath(file, config)
-        list_idx = self.get_list_idx(file, config)
-        
-        fncch_result = np.load(savefol +'/con_fncch_result_' + str(sensitivity) + '.npy', allow_pickle=True).item()
-        
-        # application of dale's law
-        
-        ex_in_mat_after_prop = fncch_result['ex_in_mat_after_prop']
+  
         
         
-        # exists ihibitory? 
-        dale_mat = self.apply_dale_law(ex_in_mat_after_prop)        
-        # check connection density. 
-        dale_density = self.compute_con_density(dale_mat)
-               
-        # dale treatment of vanilla result 
-        van_graph = self.apply_dale_law(fncch_result['ex_in_mat'])        
-        van_weight = fncch_result['final_weight_mat']
-        van_weight[van_graph==0]=0
-        
-        fncch_result['dale_mat_vanilla']= van_graph
-        fncch_result['dale_mat_raw']=dale_mat
-        fncch_result['dale_weight_vanilla']=van_weight
-        
-        #check number of components for vanilla thresholded matrix
-        #undirected treatment 
-        
-       
-        van_graph = (van_graph + van_graph.T) /2
-        van_graph[van_graph!=0]=1
-        comps, comps_size=bct.algorithms.get_components(van_graph)
-        
-        print('num of connected components :' + str(np.sum(comps_size>=2)))
-        print('density of vanilla graph :' + str(self.compute_con_density(van_graph)))
-        
-        # apply thesholding 
-        
-        fncch_result['con_density_vanilla']=self.compute_con_density(van_graph)
-        fncch_result['comps_vanilla']=np.sum(comps_size>=2)
-        fncch_result['comp_size_vanilla']=comps_size
-        fncch_result['']
         
         
-        curr_entry = self.wp1_data[list_idx]
-        curr_entry['fncch_result_'+str(sensitivity)]=fncch_result
-        self.wp1_data[list_idx]=curr_entry
 
-        
-    def characterize_graph_dir(self, file, config, sens_vec):
-        savefol = neural_assembly_utils.return_savepath(file, config)
-        list_idx = self.get_list_idx(file, config)
-        wp1_data = self.wp1_data
-        
-        curr_entry = wp1_data[list_idx]
-        graph_result = dict()
-        
-        if(not('graph_metrics' in curr_entry.keys())):
-            curr_entry['graph_metrics']=graph_result
-        
-        curr_entry['graph_metrics']['fncch']=dict()
-            
-        for sens in sens_vec:
-            adj_mat = curr_entry['fncch_result_'+str(sens)]
-            n_comps = adj_mat['comps_vanilla']
-            
-            fncch_mat = adj_mat['dale_mat_vanilla']
-            # n_comps = np.unique(comps)
-            print('number of componenets : ' + str(n_comps))
-            
-            curr_entry['graph_metrics']['fncch']['comp_'+str(sens)]=n_comps
-            if(n_comps<2):
-                print('got a promising directed graph for ' + savefol)
-                
-                curr_entry['fncch_chosen']=fncch_mat
-                curr_entry['graph_metrics']['fncch']['sensitivity']=sens
-                break
-                
-        curr_entry['fncch_chosen']=fncch_mat
-        curr_entry['graph_metrics']['fncch']['sensitivity']=sens
      
            
 
