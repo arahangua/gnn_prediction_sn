@@ -6,37 +6,56 @@ Created on Tue Feb 22 20:49:36 2022
 @author: th
 """
 
-
-import os
 import numpy as np
-import neural_assembly_utils
-import neural_assembly
-import scipy
-import mat73
-import quantities as pq
-from elephant.statistics import time_histogram
-import elephant
+
 # import ray
 
-import neural_assembly_utils2
-import neural_assembly_utils3
-import wp1_data_bct_metrics
-import wp1_data_fr
-
-import parmap
-from elephant.spike_train_correlation import spike_time_tiling_coefficient
-
-
-from itertools import combinations 
 import random
-import bct
-from sklearn.decomposition import PCA
 from sklearn.linear_model import LinearRegression 
-from sklearn.ensemble import RandomForestRegressor, AdaBoostRegressor
+from sklearn.ensemble import RandomForestRegressor
+
+from sklearn.preprocessing import StandardScaler as SS
+
+
+def batch_split_x(nodes_cp, full_index, ii, chip_ids):
+    nodes_cp = np.array(nodes_cp)
+    test_x = nodes_cp[ii]
+    train_idx=np.setxor1d(full_index, chip_ids)
+    train_x = nodes_cp[train_idx]
+    if(len(train_x[0].shape)==1):
+        train_concat = flatten_list_1d(train_x)
+    else:
+        train_concat = []
+        for jj, x in enumerate(train_x):
+            if(jj==0):
+                train_concat = x
+            else:
+                train_concat= np.vstack((train_concat, x))
+                
+    return train_concat, test_x
 
 
 
-def average_mse_batch_x(self, target_frs, y_scale, chip_ids):
+
+def flatten_list_1d(act_ratio):
+    ph = np.empty((1,0))
+    ph = np.squeeze(ph)
+    
+    for entry in act_ratio:
+        ph = np.concatenate((ph, entry))
+        
+    return ph
+
+
+def standardscaler_transform(sc_feat_pure):
+    scaler = SS()
+    scaler.fit(sc_feat_pure)
+    transformed=scaler.transform(sc_feat_pure)
+    
+    return transformed, scaler
+
+
+def average_mse_batch_x(target_frs, y_scale, chip_ids):
     mse_vec = []
     mse_train= []
     just_ave = []
@@ -57,13 +76,11 @@ def average_mse_batch_x(self, target_frs, y_scale, chip_ids):
         train_x = target_cp[train_idx]
         
         # concat all train set
-        train_x = neural_assembly_utils.flatten_list_1d(train_x)
-        
-        
-        
+        train_x = flatten_list_1d(train_x)
+ 
         #standardize
         if(y_scale):
-            train_x, train_scaler_x=neural_assembly_utils.standardscaler_transform(train_x.reshape(-1,1))
+            train_x, train_scaler_x= standardscaler_transform(train_x.reshape(-1,1))
             test_x = train_scaler_x.transform(test_x.reshape(-1,1)) 
         
      
@@ -90,17 +107,14 @@ def average_mse_batch_x(self, target_frs, y_scale, chip_ids):
     ave_result = dict()
     ave_result['mse_test']= np.array(mse_vec)
     ave_result['mse_train']= np.array(mse_train)
-    ave_result['pure_average_mse'] = np.array(just_ave) 
-    
     ave_result['mae_test']= np.array(mae_vec)
     ave_result['mae_train']= np.array(mae_train)
-    ave_result['pure_average_mae'] = np.array(just_ave_mae) 
     
     
     return ave_result
 
 
-def linear_reg_batch_x(self, nodes, target_frs, iter_n, save_model, model_string, savefol, datetime_alias, y_scale, chip_ids):
+def linear_reg_batch_x(nodes, target_frs, iter_n, y_scale, chip_ids):
     np.random.seed(42)
     random.seed(42)
     full_index= np.arange(len(target_frs))
@@ -126,17 +140,17 @@ def linear_reg_batch_x(self, nodes, target_frs, iter_n, save_model, model_string
         train_idx=np.setxor1d(full_index, same_chip) # got rid of it
         
         train_y = target_cp[train_idx]
-        train_y = neural_assembly_utils.flatten_list_1d(train_y)
+        train_y = flatten_list_1d(train_y)
         
         # make x 
         nodes_cp = np.copy(nodes)
-        train_x, test_x = self.batch_split_x(nodes_cp, full_index, ii, same_chip)
+        train_x, test_x = batch_split_x(nodes_cp, full_index, ii, same_chip)
         
-        train_x, train_scaler_x=neural_assembly_utils.standardscaler_transform(train_x)
+        train_x, train_scaler_x= standardscaler_transform(train_x)
         test_x = train_scaler_x.transform(test_x) 
         
         if(y_scale):
-            train_y, train_scaler_y=neural_assembly_utils.standardscaler_transform(train_y.reshape(-1,1))
+            train_y, train_scaler_y=standardscaler_transform(train_y.reshape(-1,1))
             test_y = train_scaler_y.transform(test_y.reshape(-1,1)) 
             
         
@@ -164,24 +178,8 @@ def linear_reg_batch_x(self, nodes, target_frs, iter_n, save_model, model_string
             mae_vec_t.append(maeloss)
             # y_pred_vec_t.append(y_pred)
              
-             
-            if(save_model):
-                savepath = savefol + '/model_save/' + datetime_alias+ '/' + model_string + '/' + str(ii)
-                if(not(os.path.exists(savepath))):
-                    os.makedirs(savepath)
-                    savename = 'model_' + str(iter_)
-                    pickle.dump(reg, open(savepath + '/' + savename, 'wb'))
-                       
-                    tr_test_name = 'tr_ts_' + str(ii)
-                    tr_ts_data = dict()
-                    tr_ts_data['train_feats'] = train_x
-                    tr_ts_data['test_feats'] = test_x
-                    tr_ts_data['train_vals'] = train_y
-                    tr_ts_data['test_vals'] = test_y
-                       
-                    np.save(savepath + '/' + tr_test_name, tr_ts_data)
-   
-#load_lr_model =pickle.load(open(filename, 'rb'))
+
+  
   
         lin_result = dict()
         lin_result['R-sq']=np.array(ls_vec)
@@ -197,7 +195,7 @@ def linear_reg_batch_x(self, nodes, target_frs, iter_n, save_model, model_string
     return per_network
 
 
-def rf_reg_batch_x(self, nodes, target_frs, iter_n, save_model, model_string, savefol, datetime_alias, y_scale, chip_ids, params):
+def rf_reg_batch_x(nodes, target_frs, iter_n, y_scale, chip_ids, params):
     np.random.seed(42)
     random.seed(42)
     full_index= np.arange(len(target_frs))
@@ -224,18 +222,18 @@ def rf_reg_batch_x(self, nodes, target_frs, iter_n, save_model, model_string, sa
         train_idx=np.setxor1d(full_index, same_chip) # got rid of it
         
         train_y = target_cp[train_idx]
-        train_y = neural_assembly_utils.flatten_list_1d(train_y)
+        train_y = flatten_list_1d(train_y)
         
         # make x 
         nodes_cp = np.copy(nodes)
-        train_x, test_x = self.batch_split_x(nodes_cp, full_index, ii, same_chip)
-        train_x, train_scaler_x=neural_assembly_utils.standardscaler_transform(train_x)
+        train_x, test_x = batch_split_x(nodes_cp, full_index, ii, same_chip)
+        train_x, train_scaler_x=standardscaler_transform(train_x)
         test_x = train_scaler_x.transform(test_x) 
         
    
         
         if(y_scale):
-            train_y, train_scaler_y=neural_assembly_utils.standardscaler_transform(train_y.reshape(-1,1))
+            train_y, train_scaler_y=standardscaler_transform(train_y.reshape(-1,1))
             test_y = train_scaler_y.transform(test_y.reshape(-1,1)) 
             train_y = np.squeeze(train_y)
             test_y = np.squeeze(test_y)
@@ -274,20 +272,7 @@ def rf_reg_batch_x(self, nodes, target_frs, iter_n, save_model, model_string, sa
             mse_test_vec.append(mseloss_test)
             mae_test_vec.append(maeloss_test)
             
-            if(save_model):
-               savepath = savefol + '/model_save/' + datetime_alias+ '/' + model_string + '/' + str(ii)
-               if(not(os.path.exists(savepath))):
-                   os.makedirs(savepath)
-               savename = 'model' + str(iter_)
-               pickle.dump(reg, open(savepath + '/' + savename, 'wb'))
-               #load_lr_model =pickle.load(open(filename, 'rb'))
-               tr_test_name = 'tr_ts_' + str(iter_)
-               tr_ts_data = dict()
-               tr_ts_data['train_feats'] = train_x
-               tr_ts_data['test_feats'] = test_x
-               tr_ts_data['train_vals'] = train_y
-               tr_ts_data['test_vals'] = test_y
-               np.save(savepath + '/' + tr_test_name, tr_ts_data)
+
    
 #load_lr_model =pickle.load(open(filename, 'rb'))
   
