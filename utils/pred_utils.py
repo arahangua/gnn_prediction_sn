@@ -17,6 +17,13 @@ def flatten_list_1d(act_ratio):
     return ph
 
 
+def standardscaler_transform(sc_feat_pure):
+    scaler = SS()
+    scaler.fit(sc_feat_pure)
+    transformed=scaler.transform(sc_feat_pure)
+    
+    return transformed, scaler
+
 
 def batch_split(self, nodes_cp, full_index, ii):
     

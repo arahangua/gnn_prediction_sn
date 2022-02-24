@@ -20,7 +20,7 @@ import gnn_torch_models
 
 import random
 from sklearn.preprocessing import StandardScaler as SS
-torch.set_default_dtype(torch.float64)
+# torch.set_default_dtype(torch.float)
 
 
 def standardscaler_transform(sc_feat_pure):
@@ -199,20 +199,6 @@ def make_rgcn_mat(train_FC, device):
     
     return edge_idx, edge_weight
                 
-def run_gridsearch_batch_x(nodes, FCs, target_frs, epoch_n, iter_n, model_string, fit_param_list, device, chip_ids):
-    
-    fit_result=[]
-    for entry in fit_param_list:
-        fit_params= dict()
-        fit_params['dropout_prob']=entry['dropout_prob']
-        fit_params['learning_rate']=entry['learning_rate']
-        fit_params['weight_decay']=entry['weight_decay']
-        fit_params['hidden_dims']=entry['hidden_dims']
-        
-        fit_params['fit_result']=run_GNN_batch_x(nodes, FCs, target_frs, epoch_n, iter_n, model_string, fit_params, device, chip_ids, 1)
-        fit_result.append(fit_params)    
-    
-    return fit_result
 
 
 def match_network_param(sage_params_uniq, chip_ids):
@@ -328,10 +314,10 @@ def run_GNN_batch_x(nodes, FCs, target_frs, n_epoch, iter_n, model_string, fit_p
             train_FC= make_diag_batch_FC(FC_cp[train_idx])
             test_FC = FC_cp[ii]
             # put into cuda 
-            train_x = torch.tensor(train_x, device = device)
-            train_y = torch.tensor(train_y, device = device)
-            test_x = torch.tensor(test_x, device = device)
-            test_y = torch.tensor(test_y, device = device)
+            train_x = torch.tensor(train_x, device = device, dtype=float)
+            train_y = torch.tensor(train_y, device = device, dtype=float)
+            test_x = torch.tensor(test_x, device = device, dtype=float)
+            test_y = torch.tensor(test_y, device = device, dtype=float)
             
             if(num_classes==1):
                 train_y = torch.reshape(train_y, (train_y.shape[0], 1))
@@ -342,19 +328,19 @@ def run_GNN_batch_x(nodes, FCs, target_frs, n_epoch, iter_n, model_string, fit_p
             edge_idx['train'] = np.array(np.where(train_FC>0))
             edge_idx['train'] = torch.tensor(edge_idx['train'], device = device)
             edge_weight['train'] = train_FC[np.where(train_FC>0)]
-            edge_weight['train'] = torch.tensor(edge_weight['train'], device = device)
+            edge_weight['train'] = torch.tensor(edge_weight['train'], device = device, dtype=float)
                         
             #prep for testing 
            
             edge_idx['test'] = np.array(np.where(test_FC>0))
             edge_idx['test'] = torch.tensor(edge_idx['test'], device = device)
             edge_weight['test'] = test_FC[np.where(test_FC>0)]
-            edge_weight['test'] = torch.tensor(edge_weight['test'], device = device)
+            edge_weight['test'] = torch.tensor(edge_weight['test'], device = device,  dtype=float)
             
             
             
             model = gnn_torch_models.return_model(model_string, num_features, num_classes, fit_params['dropout_prob'], fit_params['hidden_dims'])
-            model.to(device)            
+            model.to(device, dtype=float)            
             
             if('rgcn' in model_string):
                 edge_idx= dict()
@@ -363,8 +349,8 @@ def run_GNN_batch_x(nodes, FCs, target_frs, n_epoch, iter_n, model_string, fit_p
                 edge_idx['test'], edge_weight['test'] = make_rgcn_mat(test_FC, device)
                 edge_idx['train'] = torch.tensor(edge_idx['train'], device= device)
                 edge_idx['test'] = torch.tensor(edge_idx['test'], device= device)
-                edge_weight['train'] = torch.tensor(edge_weight['train'], device= device)
-                edge_weight['test'] = torch.tensor(edge_weight['test'], device= device)
+                edge_weight['train'] = torch.tensor(edge_weight['train'], device= device,  dtype=float)
+                edge_weight['test'] = torch.tensor(edge_weight['test'], device= device,  dtype=float)
                 
                 # edge_idx['val'], edge_weight['val'] = make_rgcn_mat(val_FC, device)
                 
