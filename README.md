@@ -5,6 +5,12 @@ This repo stores both computing scripts and data used to generate results in the
 
 # Installation
 
-An exact copy of conda environment is provided -> "conda_requirements.txt"
+An exact copy of conda environment is provided 
+```
+conda_requirements.txt"
+```
 
-but for most use cases, it would suffice to just run "pip install -r requirements.txt"
+but for most use cases, it would suffice to just run 
+```
+"pip install -r requirements.txt"
+```
