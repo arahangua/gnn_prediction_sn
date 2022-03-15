@@ -42,3 +42,7 @@ pip install -r requirements.txt
     ├── pred_utils.py # utility script in general
     └── __pycache__
 ```
+
+# Usage 
+
+please check notebook files. ("Computing FCs.ipynb", "prediction_task.ipynb")
