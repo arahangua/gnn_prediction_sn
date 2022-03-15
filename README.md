@@ -17,7 +17,7 @@ pip install -r requirements.txt
 
 # Description
 ## folder structure
-
+```
 ├── conda_requirements.txt
 ├── data
 │   ├── best_params # folder storing the best parameter that was used in the paper
@@ -41,3 +41,4 @@ pip install -r requirements.txt
 └── utils
     ├── pred_utils.py # utility script in general
     └── __pycache__
+```
