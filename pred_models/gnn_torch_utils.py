@@ -375,7 +375,7 @@ def run_GNN_batch_x(nodes, FCs, target_frs, n_epoch, iter_n, model_string, fit_p
                 
                 model.train()
                 optimizer.zero_grad()
-                out = model.forward(train_x, edge_idx['train'], edge_weight['train']) # forwarding x has 0 for single wfs defected ones
+                out = model.forward(train_x, edge_idx['train'], edge_weight['train']) # forward
                 loss = criterion(out, train_y)
                 loss.backward()
                 # torch.nn.utils.clip_grad_norm_(model.parameters(), 2.0)
