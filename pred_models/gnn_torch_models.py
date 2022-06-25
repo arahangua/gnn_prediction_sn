@@ -126,10 +126,7 @@ class RGCN2(torch.nn.Module):
     
 
 class Graphsage(torch.nn.Module):
-    """
-    A graph clasification model for nodes decribed in https://arxiv.org/abs/1903.03894.
-    This model consists of 3 stacked GCN layers followed by a linear layer.
-    """
+
     def __init__(self, num_features, num_classes, dropout_prob, aggre, hidden):
         super().__init__()
         self.embedding_size = hidden * 3
@@ -176,10 +173,7 @@ class Graphsage(torch.nn.Module):
     
 
 class Graphsage2(torch.nn.Module):
-    """
-    A graph clasification model for nodes decribed in https://arxiv.org/abs/1903.03894.
-    This model consists of 3 stacked GCN layers followed by a linear layer.
-    """
+
     def __init__(self, num_features, num_classes, dropout_prob, aggre, hidden):
         super().__init__()
         self.embedding_size = hidden * 2
@@ -219,10 +213,7 @@ class Graphsage2(torch.nn.Module):
 
 
 class Graphsage1(torch.nn.Module):
-    """
-    A graph clasification model for nodes decribed in https://arxiv.org/abs/1903.03894.
-    This model consists of 3 stacked GCN layers followed by a linear layer.
-    """
+
     def __init__(self, num_features, num_classes, dropout_prob, aggre, hidden):
         super().__init__()
         self.embedding_size = hidden * 1
@@ -253,10 +244,7 @@ class Graphsage1(torch.nn.Module):
     
 
 class NodeGCN(torch.nn.Module):
-    """
-    A graph clasification model for nodes decribed in https://arxiv.org/abs/1903.03894.
-    This model consists of 3 stacked GCN layers followed by a linear layer.
-    """
+ 
     def __init__(self, num_features, num_classes, dropout_prob, hidden):
         super(NodeGCN, self).__init__()
         self.embedding_size = hidden * 3
@@ -300,10 +288,7 @@ class NodeGCN(torch.nn.Module):
     
     
 class NodeGCN2(torch.nn.Module):
-    """
-    A graph clasification model for nodes decribed in https://arxiv.org/abs/1903.03894.
-    This model consists of 3 stacked GCN layers followed by a linear layer.
-    """
+
     def __init__(self, num_features, num_classes, dropout_prob, hidden):
         super(NodeGCN2, self).__init__()
         self.embedding_size =hidden* 2
@@ -342,10 +327,7 @@ class NodeGCN2(torch.nn.Module):
     
 
 class SlGCN(torch.nn.Module):
-    """
-    A graph clasification model for nodes decribed in https://arxiv.org/abs/1903.03894.
-    This model consists of 3 stacked GCN layers followed by a linear layer.
-    """
+ 
     def __init__(self, num_features, num_classes, dropout_prob, hidden):
         super(SlGCN, self).__init__()
         self.embedding_size = hidden
