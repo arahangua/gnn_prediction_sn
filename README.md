@@ -22,7 +22,7 @@ pip install -r requirements.txt
 ├── data
 │   ├── best_params           # folder storing the best parameter that was used in the paper
 │   ├── dataset.npy           # final dataset that was used for the prediction tasks
-│   ├── example_locs.npy      # (CCH), this numpy variable stores physical locations of neurons that were used in the notebook example
+│   ├── example_locs.npy      # (for CCH), this numpy variable stores physical locations of neurons that were used in the notebook example
 │   └── example_spktrain.npy  # spike train variable that were used in the notebook example
 │   └── extended_dataset.npy
 ├── FC_scripts
