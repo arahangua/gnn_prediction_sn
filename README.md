@@ -24,6 +24,7 @@ pip install -r requirements.txt
 │   ├── dataset.npy           # final dataset that was used for the prediction tasks
 │   ├── example_locs.npy      # (CCH), this numpy variable stores physical locations of neurons that were used in the notebook example
 │   └── example_spktrain.npy  # spike train variable that were used in the notebook example
+│   └── extended_dataset.npy
 ├── FC_scripts
 │   ├── assembly_util.py      # utility script for computing Functional connectivity (FC)
 │   └── __pycache__
@@ -37,7 +38,7 @@ pip install -r requirements.txt
 │   ├── non_gnn_models.py     # declares non-GNN models
 │   └── __pycache__
 ├── README.md
-├── requirements.txt 
+├── requirements.txt
 └── utils
     ├── pred_utils.py         # utility script in general
     └── __pycache__
