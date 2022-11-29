@@ -237,7 +237,91 @@ class Spiketrain:
         return dale_mat
     
     def compute_fncch_connectivity(self, xy_pos, sensitivity, binsize=1, n_cpu=16):
+        
+        n_neurons = len(self.spktime_list)
+        for_idx = np.arange(n_neurons)
+        neotrains = self.to_neotrain()
+        
+        combi = combinations(for_idx, 2)
+        combi_list=list(combi)
+        
+        result = parmap.map(self.parallel_fncch, combi_list, neotrains, binsize, pm_processes=n_cpu, pm_pbar=True)
+   
+        weight_mat, lag_mat, ex_in_mat = self.make_conmat(result)
+        
+        excitatory_idx = np.where(ex_in_mat>0)
+        inhibitory_idx = np.where(ex_in_mat<0)
+        
+        thres_weight_mat = np.copy(weight_mat)
+        
+         # spatio temporal filtering 
+        prop_velocity = 400 # 600um/ms
+        xy_pos = self.get_xy_positions(sorted_time)
+        
+        
+        probe_idx = np.where(thres_weight_mat>0)
+        lags_to_probe = lag_mat[probe_idx]
+        
+        distance_vec = self.make_distance_vec(probe_idx, xy_pos)
+        lag_ceil = distance_vec / prop_velocity
+        
+        idx_to_kick = []
+        for ii, lag_ in enumerate(lags_to_probe):
+            if(lag_ < lag_ceil[ii]):
+                idx_to_kick.append(ii)
                 
+        # reflect this result
+        pre = probe_idx[0]
+        post = probe_idx[1]
+        ex_in_mat_raw = np.copy(ex_in_mat)
+        con_result=dict()
+        con_result['ex_in_mat_raw']=ex_in_mat_raw
+               
+        thres_weight_mat[pre[idx_to_kick], post[idx_to_kick]] = 0
+        #ex_in_mat_before_prop = np.copy(ex_in_mat)
+        ex_in_mat[pre[idx_to_kick], post[idx_to_kick]] = 0
+        
+        excitatory_idx = np.where(ex_in_mat>0)
+        inhibitory_idx = np.where(ex_in_mat<0)
+        
+        con_result['raw_after_prop']=np.copy(thres_weight_mat)
+        con_result['weight_raw']=np.copy(weight_mat)
+        con_result['ex_in_mat_after_prop']=np.copy(ex_in_mat)
+        #apply pastore et al. 2018 hard threshold
+        weight_mat = thres_weight_mat
+        
+        np.fill_diagonal(weight_mat, 0)
+        
+        mu = np.nanmean(abs(weight_mat[weight_mat!=0]))
+        sigma = np.nanstd(abs(weight_mat[weight_mat!=0]))
+
+        for sensitivity in sens_vec:
+            new_w_mat = np.copy(thres_weight_mat)
+            new_ex_in_mat = np.copy(ex_in_mat)
+            to_zero_ex=np.where(weight_mat[excitatory_idx]< (mu + sigma*sensitivity))
+            #to_zero_ex=np.where(weight_mat[excitatory_idx]< 0.05)
+            
+            to_zero_in=np.where(weight_mat[inhibitory_idx]< (mu + sigma*sensitivity))
+            
+            new_w_mat[excitatory_idx[0][to_zero_ex], excitatory_idx[1][to_zero_ex]] = 0
+            new_w_mat[inhibitory_idx[0][to_zero_in], inhibitory_idx[1][to_zero_in]] = 0
+            
+            
+            new_ex_in_mat[excitatory_idx[0][to_zero_ex], excitatory_idx[1][to_zero_ex]] = 0
+            new_ex_in_mat[inhibitory_idx[0][to_zero_in], inhibitory_idx[1][to_zero_in]] = 0
+            
+            con_result['final_weight_mat']= new_w_mat
+            con_result['lag_mat'] = lag_mat
+            con_result['ex_in_mat'] = new_ex_in_mat
+            con_result['sensitivity']=sensitivity
+                    
+            if(save_result):
+                if(not(os.path.exists(savefol))):
+                    os.makedirs(savefol)
+                np.save(savefol + '/con_fncch_result_re_' + str(sensitivity), con_result)
+            
+        return thres_weight_mat, lag_mat, ex_in_mat
+        $$$$$$$$$$
         n_neurons = len(self.spktime_list)
         for_idx = np.arange(n_neurons)
         neotrains = self.to_neotrain()
@@ -256,7 +340,7 @@ class Spiketrain:
         thres_weight_mat = np.copy(weight_mat)
         
          # spatio temporal filtering 
-        prop_velocity = 600 # 600um/ms
+        prop_velocity = 400 # 400um/ms
         # xy_pos = self.get_xy_positions(sorted_time)
                
         probe_idx = np.where(thres_weight_mat>0)
@@ -288,37 +372,37 @@ class Spiketrain:
         con_result['raw_after_prop']=np.copy(thres_weight_mat)
         con_result['weight_raw']=np.copy(weight_mat)
         con_result['ex_in_mat_after_prop']=np.copy(ex_in_mat)
-        #apply pastore et al. 2018 hard threshold mu + sigma for inhibitory, mu + 2*sigma for excitatory
+        #apply pastore et al. 2018 hard threshold 
         weight_mat = thres_weight_mat
         
-        np.fill_diagonal(weight_mat, np.nan)
+        np.fill_diagonal(weight_mat, 0)
+        mu = np.nanmean(abs(weight_mat[weight_mat!=0]))
+        sigma = np.nanstd(abs(weight_mat[weight_mat!=0]))
         
-        mu_ex = np.nanmean(abs(weight_mat[excitatory_idx]))
-        sigma_ex = np.nanmean(abs(weight_mat[excitatory_idx]))
-
-        mu_in = np.nanmean(abs(weight_mat[inhibitory_idx]))
-        sigma_in = np.nanmean(abs(weight_mat[inhibitory_idx]))
         
         #sns.heatmap(weight_mat)
+        new_w_mat = np.copy(thres_weight_mat)
+        new_ex_in_mat = np.copy(ex_in_mat)
+        to_zero_ex=np.where(weight_mat[excitatory_idx]< (mu + sigma*sensitivity))
+        to_zero_in=np.where(weight_mat[inhibitory_idx]< (mu + sigma*sensitivity))
+
+        new_w_mat[excitatory_idx[0][to_zero_ex], excitatory_idx[1][to_zero_ex]] = 0
+        new_w_mat[inhibitory_idx[0][to_zero_in], inhibitory_idx[1][to_zero_in]] = 0
+
+
+        new_ex_in_mat[excitatory_idx[0][to_zero_ex], excitatory_idx[1][to_zero_ex]] = 0
+        new_ex_in_mat[inhibitory_idx[0][to_zero_in], inhibitory_idx[1][to_zero_in]] = 0
   
-        to_zero_ex=np.where(weight_mat[excitatory_idx]< (mu_ex +2*sigma_ex*sensitivity))
-        to_zero_in=np.where(weight_mat[inhibitory_idx]< (mu_in +sigma_in*sensitivity))
         
-        thres_weight_mat[excitatory_idx[0][to_zero_ex], excitatory_idx[1][to_zero_ex]] = 0
-        thres_weight_mat[inhibitory_idx[0][to_zero_in], inhibitory_idx[1][to_zero_in]] = 0
-        
-        ex_in_mat[excitatory_idx[0][to_zero_ex], excitatory_idx[1][to_zero_ex]] = 0
-        ex_in_mat[inhibitory_idx[0][to_zero_in], inhibitory_idx[1][to_zero_in]] = 0
-        
-        con_result['final_weight_mat']= thres_weight_mat
+        con_result['final_weight_mat']= new_w_mat
         con_result['lag_mat'] = lag_mat
-        con_result['ex_in_mat'] = ex_in_mat
+        con_result['ex_in_mat'] = new_ex_in_mat
         con_result['sensitivity']=sensitivity
+        
         
         # further filtering e.g. dale's law 
         
         # application of dale's law
-        
         ex_in_mat_after_prop = np.copy(con_result['ex_in_mat_after_prop'])
         
         
