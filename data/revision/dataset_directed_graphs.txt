@@ -1,1 +1,0 @@
-"dataset.npy" in this folder has the dataset for 5 different gamma values used in the study (0, 0.5, 1.0, 1.5, 2).
