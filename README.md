@@ -44,8 +44,6 @@ pip install -r requirements.txt
     ├── pred_utils.py         # utility script in general
     └── __pycache__
 
-
-
 ```
 
 
