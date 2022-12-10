@@ -20,29 +20,33 @@ pip install -r requirements.txt
 ```
 ├── conda_requirements.txt
 ├── data
-│   ├── best_params           # folder storing the best parameter that was used in the paper
-│   ├── dataset.npy           # final dataset that was used for the prediction tasks
-│   ├── example_locs.npy      # (for CCH), this numpy variable stores physical locations of neurons that were used in the notebook example
-│   └── example_spktrain.npy  # spike train variable that were used in the notebook example
-│   └── extended_dataset.npy  # extended dataset to test generalizability of the result.
+│   ├── best_params            # folder storing the best parameter that was used in the paper
+│   ├── dataset.npy            # final dataset that was used for the prediction tasks
+│   ├── example_locs.npy       # (for CCH), this numpy variable stores physical locations of neurons that were used in the notebook example
+│   ├── example_spktrain.npy   # spike train variable that were used in the notebook example
+│   ├── extended_dataset.npy   # extended dataset to test generalizability of the result.
+│   └── revision               # added data for maximum entropy model and FNCCH (directed connectivity with varying gamma values)
 ├── FC_scripts
-│   ├── assembly_util.py      # utility script for computing Functional connectivity (FC)
-│   └── __pycache__
+│   ├── assembly_util.py      # utility script for computing Functional connectivity (FC)
+│   └── __pycache__
 ├── LICENSE
-├── notebook
-│   ├── Computing FCs.ipynb   # notebook tutorial for computing FCs
-│   └── prediction_task.ipynb # notebook tutorial for training / testing prediction models 
+├── notebook                  
+│   ├── Computing FCs.ipynb   # notebook tutorial for computing FCs
+│   └── prediction_task.ipynb # notebook tutorial for training / testing prediction models 
 ├── pred_models
-│   ├── gnn_torch_models.py   # declares GNN models
-│   ├── gnn_torch_utils.py    # util script for computing GNN models
-│   ├── non_gnn_models.py     # declares non-GNN models
-│   └── __pycache__
+│   ├── gnn_torch_models.py   # declares GNN models
+│   ├── gnn_torch_utils.py    # util script for computing GNN models
+│   ├── non_gnn_models.py     # declares non-GNN models
+│   └── __pycache__
 ├── README.md
 ├── requirements.txt
 └── utils
     ├── pred_utils.py         # utility script in general
     └── __pycache__
+
 ```
+
+
 
 # Usage 
 
