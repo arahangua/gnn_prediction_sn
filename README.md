@@ -20,31 +20,6 @@ pip install -r requirements.txt
 ```
 ├── conda_requirements.txt
 ├── data
-│   ├── best_params          
-│   ├── dataset.npy           
-│   ├── example_locs.npy      
-│   └── example_spktrain.npy  
-│   └── extended_dataset.npy  
-├── FC_scripts
-│   ├── assembly_util.py      
-│   └── __pycache__
-├── LICENSE
-├── notebook
-│   ├── Computing FCs.ipynb   
-│   └── prediction_task.ipynb 
-├── pred_models
-│   ├── gnn_torch_models.py   
-│   ├── gnn_torch_utils.py    
-│   ├── non_gnn_models.py     
-│   └── __pycache__
-├── README.md
-├── requirements.txt
-└── utils
-    ├── pred_utils.py         
-    └── __pycache__
-
-├── conda_requirements.txt
-├── data
 │   ├── best_params            # folder storing the best parameter that was used in the paper
 │   ├── dataset.npy            # final dataset that was used for the prediction tasks
 │   ├── example_locs.npy       # (for CCH), this numpy variable stores physical locations of neurons that were used in the notebook example
