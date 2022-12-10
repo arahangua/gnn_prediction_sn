@@ -1,1 +1,6 @@
 You can find the best parameter set resulting from the grid search performed in the study.
+
+e.g.)
+rf_batch_grid_fit_x_0_max_p_fncch_re_0.5.npy => random forest parameter for the dataset used for CCH (gamma = 0.5)
+rgcn_params_x_uniq_20_fncch_re_0.5_0.npy => rgcn parameter set for the dataset used for CCH (gamma=0.5)
+sage_params_x_uniq_20_maxent_5_0.npy => graphSAGE parameter set for the dataset using Maximum entropy model (pairwise Ising) using binned(5ms) spike trains.
